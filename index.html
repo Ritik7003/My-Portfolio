@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ritik Pandey | Interactive 3D Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- GSAP & ScrollTrigger -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #050505;
+            --primary: #00f2fe;
+            --secondary: #4facfe;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* --- Custom Cursor --- */
+        #cursor-dot {
+            position: fixed; width: 10px; height: 10px; background: #fff;
+            border-radius: 50%; pointer-events: none; z-index: 10000;
+            transform: translate(-50%, -50%); mix-blend-mode: difference;
+        }
+        #cursor-ring {
+            position: fixed; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.5);
+            border-radius: 50%; pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%); transition: width 0.3s, height 0.3s, background 0.3s;
+        }
+
+        /* --- Layout --- */
+        nav {
+            position: fixed; width: 100%; padding: 20px 0; z-index: 100;
+            background: rgba(5,5,5,0.4); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #fff; font-size: 1.5rem; font-weight: 800; }
+        .logo-icon {
+            width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: #000; font-size: 1.2rem; font-weight: 800; box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+        }
+        .nav-content { display: flex; gap: 40px; }
+        .nav-content a { color: #fff; text-decoration: none; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; font-size: 0.85rem; display: inline-block;}
+        @media (max-width: 768px) {
+            .nav-content { display: none; }
+        }
+
+        section { max-width: 1200px; margin: 0 auto; position: relative; padding: 120px 20px; z-index: 1; }
+        
+        /* --- Hero Section --- */
+        .hero { height: 100vh; max-width: 100%; padding: 0; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        
+        .spline-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: auto; }
+        
+        .hero-content {
+            position: relative; z-index: 10; pointer-events: none; text-align: center;
+            background: rgba(10, 10, 10, 0.4); padding: 50px 80px; border-radius: 30px; 
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        
+        h1 { font-size: clamp(3rem, 8vw, 6rem); margin: 0 0 10px 0; font-weight: 800; line-height: 1.1; letter-spacing: -2px; }
+        .gradient-text { background: linear-gradient(90deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 2.5rem; margin-bottom: 40px; font-weight: 800; letter-spacing: -1px; }
+        p { color: var(--text-muted); line-height: 1.7; font-size: 1.15rem; }
+
+        /* --- Glass Cards --- */
+        .glass {
+            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px; padding: 40px; position: relative; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+        }
+        .glass:hover {
+            transform: translateY(-5px); border-color: rgba(0, 242, 254, 0.3);
+            box-shadow: 0 15px 40px rgba(0, 242, 254, 0.15);
+        }
+
+        /* Grids */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 50px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        /* Badges */
+        .skills-container { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+        .badge {
+            background: rgba(0, 242, 254, 0.1); border: 1px solid var(--primary);
+            padding: 10px 20px; border-radius: 30px; font-weight: 600; font-size: 0.9rem;
+            color: var(--primary); transition: background 0.3s, color 0.3s;
+        }
+        .badge:hover { background: var(--primary); color: #000; }
+
+        /* Buttons (Magnetic) */
+        .btn {
+            padding: 18px 40px; background: linear-gradient(90deg, var(--primary), var(--secondary)); color: #000; text-decoration: none;
+            border-radius: 40px; font-weight: 800; display: inline-block; margin-top: 20px;
+            font-size: 1rem; text-transform: uppercase; letter-spacing: 1px;
+            border: none; position: relative; pointer-events: auto;
+            box-shadow: 0 10px 20px rgba(0, 242, 254, 0.2); transition: 0.3s;
+        }
+        .btn:hover { box-shadow: 0 15px 30px rgba(0, 242, 254, 0.6); transform: scale(1.05); }
+        .magnetic { display: inline-block; cursor: pointer; }
+
+        .project-card { padding: 30px !important; display: flex; flex-direction: column; justify-content: space-between; }
+        .project-card h3 { font-size: 1.8rem; margin: 0 0 15px 0; color: #fff; }
+        .project-link {
+            width: 50px; height: 50px; border-radius: 50%; background: rgba(0,242,254,0.1);
+            display: flex; align-items: center; justify-content: center; color: var(--primary); text-decoration: none;
+            transition: all 0.3s; margin-top: 20px; border: 1px solid rgba(0,242,254,0.3); font-size: 1.2rem; font-weight: bold;
+        }
+        .project-card:hover .project-link { background: var(--primary); color: #000; transform: rotate(-45deg); }
+
+        /* Timeline */
+        .timeline-item { padding-left: 30px; border-left: 2px solid rgba(0, 242, 254, 0.3); position: relative; margin-bottom: 40px; }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -8px; top: 5px; width: 14px; height: 14px;
+            border-radius: 50%; background: var(--primary); box-shadow: 0 0 10px var(--primary);
+        }
+        .timeline-item h3 { margin: 0 0 5px 0; font-size: 1.5rem; color: #fff; }
+        .timeline-date { color: var(--secondary); font-weight: 600; font-size: 0.95rem; margin-bottom: 15px; display: block; }
+        
+        .gsap-reveal { opacity: 0; visibility: hidden; }
+        .section-title { font-size: 3rem; text-align: center; margin-bottom: 60px; color: #fff; }
+
+        /* Subtle Global Background Gradient */
+        .bg-glow {
+            position: fixed; top: 50%; left: 50%; width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(0,242,254,0.1) 0%, transparent 70%);
+            transform: translate(-50%, -50%); pointer-events: none; z-index: 0;
+            filter: blur(50px);
+        }
+
+        /* --- 3D Floating Elements --- */
+        .shape-container { position: fixed; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; z-index: 0; perspective: 1000px; }
+        .cube {
+            position: absolute; width: 80px; height: 80px; transform-style: preserve-3d;
+            animation: rotateCube 15s infinite linear;
+        }
+        .cube-face {
+            position: absolute; width: 80px; height: 80px; background: rgba(0, 242, 254, 0.05);
+            border: 1px solid rgba(0, 242, 254, 0.3); backdrop-filter: blur(5px);
+        }
+        .cube-face.front { transform: translateZ(40px); }
+        .cube-face.back { transform: rotateY(180deg) translateZ(40px); }
+        .cube-face.right { transform: rotateY(90deg) translateZ(40px); }
+        .cube-face.left { transform: rotateY(-90deg) translateZ(40px); }
+        .cube-face.top { transform: rotateX(90deg) translateZ(40px); }
+        .cube-face.bottom { transform: rotateX(-90deg) translateZ(40px); }
+
+        .pyramid {
+            position: absolute; width: 0; height: 0; transform-style: preserve-3d;
+            animation: rotatePyramid 20s infinite linear reverse;
+        }
+        .pyramid-face {
+            position: absolute; border-left: 50px solid transparent; border-right: 50px solid transparent;
+            border-bottom: 86.6px solid rgba(79, 172, 254, 0.1); filter: drop-shadow(0 0 10px rgba(79, 172, 254, 0.2));
+            backdrop-filter: blur(5px); transform-origin: 50% 100%;
+        }
+        .pyramid-face.front { transform: translateZ(28.8px) rotateX(30deg); }
+        .pyramid-face.back { transform: rotateY(180deg) translateZ(28.8px) rotateX(30deg); }
+        .pyramid-face.right { transform: rotateY(120deg) translateZ(28.8px) rotateX(30deg); }
+        .pyramid-face.left { transform: rotateY(240deg) translateZ(28.8px) rotateX(30deg); }
+
+        @keyframes rotateCube { 0% { transform: rotateX(0) rotateY(0) rotateZ(0) translateY(0); } 50% { transform: rotateX(180deg) rotateY(180deg) rotateZ(90deg) translateY(-50px); } 100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg) translateY(0); } }
+        @keyframes rotatePyramid { 0% { transform: rotateX(0) rotateY(0) rotateZ(0) translateY(0); } 50% { transform: rotateX(180deg) rotateY(180deg) rotateZ(-90deg) translateY(60px); } 100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(0) translateY(0); } }
+
+        .cube1 { top: 20%; left: 10%; }
+        .cube2 { top: 75%; right: 15%; width: 50px; height: 50px; }
+        .cube2 .cube-face { width: 50px; height: 50px; }
+        .cube2 .cube-face.front { transform: translateZ(25px); }
+        .cube2 .cube-face.back { transform: rotateY(180deg) translateZ(25px); }
+        .cube2 .cube-face.right { transform: rotateY(90deg) translateZ(25px); }
+        .cube2 .cube-face.left { transform: rotateY(-90deg) translateZ(25px); }
+        .cube2 .cube-face.top { transform: rotateX(90deg) translateZ(25px); }
+        .cube2 .cube-face.bottom { transform: rotateX(-90deg) translateZ(25px); }
+
+        .pyramid1 { top: 35%; right: 8%; }
+        .pyramid2 { top: 85%; left: 15%; transform: scale(0.7); }
+    </style>
+</head>
+<body>
+
+    <!-- Custom Cursors -->
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
+    <div class="bg-glow"></div>
+
+    <!-- 3D Floating Shapes -->
+    <div class="shape-container">
+        <div class="cube cube1">
+            <div class="cube-face front"></div><div class="cube-face back"></div>
+            <div class="cube-face right"></div><div class="cube-face left"></div>
+            <div class="cube-face top"></div><div class="cube-face bottom"></div>
+        </div>
+        <div class="cube cube2">
+            <div class="cube-face front"></div><div class="cube-face back"></div>
+            <div class="cube-face right"></div><div class="cube-face left"></div>
+            <div class="cube-face top"></div><div class="cube-face bottom"></div>
+        </div>
+        <div class="pyramid pyramid1">
+            <div class="pyramid-face front"></div><div class="pyramid-face back"></div>
+            <div class="pyramid-face right"></div><div class="pyramid-face left"></div>
+        </div>
+        <div class="pyramid pyramid2">
+            <div class="pyramid-face front"></div><div class="pyramid-face back"></div>
+            <div class="pyramid-face right"></div><div class="pyramid-face left"></div>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-container">
+            <a href="#home" class="logo magnetic">
+                <div class="logo-icon">RP</div>
+                <span>Ritik <span style="color: var(--primary);">Pandey</span></span>
+            </a>
+            <div class="nav-content">
+                <a href="#home" class="magnetic">Home</a>
+                <a href="#about" class="magnetic">About</a>
+                <a href="#experience" class="magnetic">Experience</a>
+                <a href="#projects" class="magnetic">Projects</a>
+                <a href="#contact" class="magnetic">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section id="home" class="hero">
+        <div class="spline-bg">
+            <!-- User Requested Glass Knot Vortex -->
+            <iframe src='https://my.spline.design/glassknotvortex-CJuc2rFxkmhS62OKSoCKismo/' frameborder='0' width='100%' height='100%'></iframe>
+        </div>
+        
+        <div class="hero-content">
+            <p class="gsap-reveal hero-el" style="color: var(--primary); font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">Hello, I am</p>
+            <h1 class="gsap-reveal hero-el">Ritik <span class="gradient-text">Pandey</span></h1>
+            <p class="gsap-reveal hero-el" style="font-size: 1.5rem; color: #e5e7eb; margin-bottom: 30px;">Interactive WordPress Developer</p>
+            <a href="#projects" class="btn magnetic gsap-reveal hero-el">Explore My Work</a>
+        </div>
+    </section>
+
+    <!-- ABOUT SECTION -->
+    <section id="about">
+        <h2 class="gsap-title section-title">About Me</h2>
+        <div class="grid-2">
+            <div class="glass gsap-card">
+                <h3 style="font-size: 1.8rem; margin-top: 0; color: #fff;">Professional Summary</h3>
+                <p>I am a passionate developer with over 4 years of experience building modern, responsive, and highly optimized websites.</p>
+                <p>My expertise lies in WordPress, Elementor, and crafting bespoke frontend experiences that captivate users. I focus on bridging the gap between elegant design and flawless functionality, delivering high-quality business websites with clean, modern interfaces.</p>
+            </div>
+            
+            <div class="glass gsap-card">
+                <h3 style="font-size: 1.8rem; margin-top: 0; color: #fff;">Technical Arsenal</h3>
+                <div class="skills-container">
+                    <span class="badge magnetic">WordPress</span>
+                    <span class="badge magnetic">Elementor</span>
+                    <span class="badge magnetic">WooCommerce</span>
+                    <span class="badge magnetic">Divi</span>
+                    <span class="badge magnetic">HTML5 / CSS3</span>
+                    <span class="badge magnetic">JavaScript</span>
+                    <span class="badge magnetic">Technical SEO</span>
+                    <span class="badge magnetic">UI/UX Design</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- EXPERIENCE SECTION -->
+    <section id="experience">
+        <h2 class="gsap-title section-title">Experience</h2>
+        <div class="glass gsap-card">
+            <div class="timeline-item">
+                <h3>WordPress Developer</h3>
+                <span class="timeline-date">CXC (Remote, California, USA) | April 2022 – Present</span>
+                <p>Designed and developed responsive WordPress websites using Elementor and WooCommerce. Built modern business websites and landing pages focused on user experience and conversion. Optimized website speed, responsiveness, and overall performance across devices.</p>
+            </div>
+            <div class="timeline-item" style="border-left-color: rgba(139, 92, 246, 0.3); margin-bottom: 0;">
+                <h3 style="color: #fff;">SEO Executive</h3>
+                <span class="timeline-date" style="color: #8b5cf6;">QDS Technology (Noida, India) | January 2022 – April 2022</span>
+                <p style="margin-bottom: 0;">Managed on-page and off-page SEO activities for business websites. Conducted keyword research and optimized website content for better search visibility, working heavily on digital marketing strategies.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROJECTS SECTION -->
+    <section id="projects">
+        <h2 class="gsap-title section-title">Websites I Created</h2>
+        <div class="grid-3">
+            <div class="glass project-card gsap-card">
+                <div>
+                    <h3>ASOFSC</h3>
+                    <p>Advanced Elementor business platform focusing on high performance and modern UI aesthetics.</p>
+                </div>
+                <a href="https://asofsc.com" target="_blank" class="project-link magnetic">→</a>
+            </div>
+            <div class="glass project-card gsap-card">
+                <div>
+                    <h3>Family Dental</h3>
+                    <p>Medical portal optimizing patient scheduling and local search visibility.</p>
+                </div>
+                <a href="https://sanfernandopacoimafamilydental.com" target="_blank" class="project-link magnetic">→</a>
+            </div>
+            <div class="glass project-card gsap-card">
+                <div>
+                    <h3>Debt Calls</h3>
+                    <p>A lightning-fast landing page engineered specifically for lead generation and conversion.</p>
+                </div>
+                <a href="https://debtcalls.com" target="_blank" class="project-link magnetic">→</a>
+            </div>
+            <div class="glass project-card gsap-card">
+                <div>
+                    <h3>Fast Debt</h3>
+                    <p>Financial services platform presenting complex data through a clean, intuitive layout.</p>
+                </div>
+                <a href="https://fastdebt.com" target="_blank" class="project-link magnetic">→</a>
+            </div>
+            <div class="glass project-card gsap-card">
+                <div>
+                    <h3>Mova Chiro</h3>
+                    <p>Local business website designed for a chiropractor to dominate local SEO rankings.</p>
+                </div>
+                <a href="https://movachiro.com" target="_blank" class="project-link magnetic">→</a>
+            </div>
+            <div class="glass project-card gsap-card">
+                <div>
+                    <h3>New Business Pack</h3>
+                    <p>Dynamic service bundle platform combining e-commerce functionality with professional design.</p>
+                </div>
+                <a href="https://newbusinesspack.com" target="_blank" class="project-link magnetic">→</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT SECTION -->
+    <section id="contact" style="padding-bottom: 150px;">
+        <h2 class="gsap-title section-title">Get In Touch</h2>
+        <div class="glass gsap-card" style="max-width: 700px; margin: 0 auto; text-align: center; padding: 60px;">
+            <p style="margin-bottom: 40px; font-size: 1.2rem; color: #fff;">Currently open for new freelance opportunities. Let's discuss how we can bring your next idea to life.</p>
+            
+            <a href="mailto:ritiktomeet@gmail.com" class="btn magnetic" style="font-size: 1.1rem; padding: 20px 50px;">ritiktomeet@gmail.com</a>
+            
+            <div style="margin-top: 50px; display: flex; justify-content: center; gap: 30px;">
+                <a href="https://linkedin.com/in/me-ritik-pandey" target="_blank" class="magnetic" style="color: var(--primary); text-decoration: none; font-size: 1.2rem; font-weight: bold;">LinkedIn</a>
+                <a href="tel:+918881026565" class="magnetic" style="color: var(--primary); text-decoration: none; font-size: 1.2rem; font-weight: bold;">+91-8881026565</a>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // --- Custom Cursor --- //
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+        
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let ringX = mouseX;
+        let ringY = mouseY;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.left = mouseX + 'px';
+            cursorDot.style.top = mouseY + 'px';
+        });
+
+        function animateFollowers() {
+            ringX += (mouseX - ringX) * 0.2;
+            ringY += (mouseY - ringY) * 0.2;
+            cursorRing.style.left = ringX + 'px';
+            cursorRing.style.top = ringY + 'px';
+            requestAnimationFrame(animateFollowers);
+        }
+        animateFollowers();
+
+        // Magnetic Hover Effect
+        const magnetics = document.querySelectorAll('.magnetic');
+        magnetics.forEach(btn => {
+            btn.addEventListener('mousemove', function(e) {
+                const rect = this.getBoundingClientRect();
+                const h = rect.width / 2;
+                const v = rect.height / 2;
+                const x = e.clientX - rect.left - h;
+                const y = e.clientY - rect.top - v;
+
+                gsap.to(this, { x: x * 0.4, y: y * 0.4, duration: 0.4, ease: "power3.out" });
+                
+                cursorRing.style.width = '60px';
+                cursorRing.style.height = '60px';
+                cursorRing.style.background = 'rgba(0, 242, 254, 0.2)';
+            });
+            btn.addEventListener('mouseleave', function() {
+                gsap.to(this, { x: 0, y: 0, duration: 0.7, ease: "elastic.out(1, 0.3)" });
+                cursorRing.style.width = '40px';
+                cursorRing.style.height = '40px';
+                cursorRing.style.background = 'transparent';
+            });
+        });
+
+        // --- GSAP ScrollTrigger Animations --- //
+        gsap.config({ autoSleep: 60 });
+        
+        // Hero Entrance
+        gsap.fromTo('.hero-el', 
+            { y: 50, opacity: 0, visibility: 'visible' }, 
+            { y: 0, opacity: 1, duration: 1, stagger: 0.2, ease: "power3.out", delay: 0.5 }
+        );
+
+        // Section Titles Scroll
+        gsap.utils.toArray('.gsap-title').forEach(title => {
+            gsap.fromTo(title,
+                { y: 50, opacity: 0 },
+                {
+                    scrollTrigger: {
+                        trigger: title,
+                        start: "top 85%",
+                        toggleActions: "play none none reverse"
+                    },
+                    y: 0, opacity: 1, duration: 0.8, ease: "power3.out"
+                }
+            );
+        });
+
+        // Cards Stagger Scroll
+        gsap.utils.toArray('.gsap-card').forEach((card, i) => {
+            gsap.fromTo(card,
+                { y: 80, opacity: 0 },
+                {
+                    scrollTrigger: {
+                        trigger: card,
+                        start: "top 90%",
+                        toggleActions: "play none none reverse"
+                    },
+                    y: 0, opacity: 1, duration: 0.8, ease: "power3.out", delay: (i % 3) * 0.1
+                }
+            );
+        });
+
+        // Initialize Vanilla Tilt on Glass Cards
+        VanillaTilt.init(document.querySelectorAll(".glass"), {
+            max: 10,
+            speed: 400,
+            glare: true,
+            "max-glare": 0.15,
+            scale: 1.02
+        });
+    </script>
+</body>
+</html>
